@@ -25,7 +25,7 @@ Found a bug or have an improvement? **Open an issue or contact us.**
 
 ---
 
-<img width="1248" height="883" alt="image" src="https://github.com/user-attachments/assets/b739f9a9-899b-4d61-9756-2669013f257f" />
+<img width="1237" height="876" alt="image" src="https://github.com/user-attachments/assets/ac56f730-2eab-4fb3-9ee0-5f84c8f6b8b8" />
 
 
 ## 🔍 What is the VGT Tracking Proxy?
