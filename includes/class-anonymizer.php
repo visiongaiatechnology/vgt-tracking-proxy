@@ -32,25 +32,86 @@ final class Anonymizer {
 
     /**
      * Maskiert IP-Adressen zur Wahrung der DSGVO-Souveränität.
+     * Unterstützt hochpräzise IPv4-Maskierung (/24-Äquivalent) und IPv6-Maskierung (/64-Äquivalent).
+     * Löst das Risiko komprimierter IPv6-Notation über ein duales Verarbeitungsverfahren.
      */
     public static function anonymizeIp(string $ip): string {
+        $ip = trim($ip);
+        if (empty($ip)) {
+            return '0.0.0.0';
+        }
+
+        // 1. IPv4-Anonymisierung (Letztes Oktett auf 0 nullen)
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
             $parts = explode('.', $ip);
             if (count($parts) === 4) {
                 $parts[3] = '0';
                 return implode('.', $parts);
             }
-        } elseif (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-            $parts = explode(':', $ip);
-            $count = count($parts);
-            if ($count > 1) {
-                for ($i = max(1, $count - 4); $i < $count; $i++) {
-                    $parts[$i] = '0000';
-                }
-                return implode(':', $parts);
-            }
         }
+
+        // 2. IPv6-Anonymisierung (Letzte 4 Blöcke / 64 Bits auf 0 nullen)
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            // Bevorzugter Weg: Hochperformante Byte-Manipulation im RAM
+            if (function_exists('inet_pton') && function_exists('inet_ntop')) {
+                $packed = @inet_pton($ip);
+                if ($packed !== false) {
+                    // IPv6 besteht aus 16 Bytes (128 Bits). Die hinteren 8 Bytes (64 Bits) werden genullt.
+                    for ($i = 8; $i < 16; $i++) {
+                        $packed[$i] = "\x00";
+                    }
+                    $masked = @inet_ntop($packed);
+                    return $masked !== false ? $masked : '::';
+                }
+            }
+
+            // Fallback-Weg: Deterministische String-Expansion für komprimierte Notationen
+            return self::anonymizeIpv6Fallback($ip);
+        }
+
         return '0.0.0.0';
+    }
+
+    /**
+     * Pure-PHP Fallback-Methode zur fehlerfreien Expandierung und Maskierung komprimierter IPv6-Adressen.
+     */
+    private static function anonymizeIpv6Fallback(string $ip): string {
+        // Expandiert das doppelte Doppelpunkt-Shorthand "::"
+        if (str_contains($ip, '::')) {
+            $parts = explode('::', $ip, 2);
+            $left  = !empty($parts[0]) ? explode(':', $parts[0]) : [];
+            $right = !empty($parts[1]) ? explode(':', $parts[1]) : [];
+            
+            $missingCount = 8 - (count($left) + count($right));
+            if ($missingCount < 0) {
+                return '::';
+            }
+            
+            $expandedParts = array_merge(
+                $left,
+                array_fill(0, $missingCount, '0000'),
+                $right
+            );
+        } else {
+            $expandedParts = explode(':', $ip);
+        }
+
+        // Letzte 4 Blöcke (64 Bits) für DSGVO-Souveränität vollständig nullen
+        for ($i = 4; $i < 8; $i++) {
+            $expandedParts[$i] = '0000';
+        }
+
+        // Normalisieren der Hexadezimal-Blöcke (Füllung auf 4 Zeichen)
+        $normalizedParts = array_map(static function(string $part): string {
+            $part = preg_replace('/[^a-f0-9]/i', '', $part) ?? '';
+            return str_pad($part, 4, '0', STR_PAD_LEFT);
+        }, $expandedParts);
+
+        if (count($normalizedParts) !== 8) {
+            return '::';
+        }
+
+        return implode(':', $normalizedParts);
     }
 
     /**
