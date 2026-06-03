@@ -25,6 +25,9 @@ Found a bug or have an improvement? **Open an issue or contact us.**
 
 ---
 
+<img width="1248" height="883" alt="image" src="https://github.com/user-attachments/assets/b739f9a9-899b-4d61-9756-2669013f257f" />
+
+
 ## 🔍 What is the VGT Tracking Proxy?
 
 The **VGT Self-Hosted Tracking Proxy** is a zero-dependency, server-side tracking gateway for WordPress and WooCommerce. It intercepts e-commerce events at the PHP level, anonymizes all personally identifiable data (PII) in volatile server memory, and forwards clean event payloads directly to advertising networks via server-to-server APIs — bypassing ad-blockers, browser restrictions, and third-party CDN dependencies entirely.
